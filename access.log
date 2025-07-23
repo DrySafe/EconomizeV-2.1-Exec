@@ -1,0 +1,24 @@
+04-06-2024 15:33:10 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 15:33:10 info: Acesso de IP: ::1, Rota: /favicon.ico
+04-06-2024 15:33:28 info: Acesso de IP: ::1, Rota: /logEdit
+04-06-2024 15:33:28 info: Produto editado de IP: ::1, Ação: edit, Produto: {"codigo":"teste","produto":"111","quantidade":"1","motivo":"USO LOJA","dataVencimento":"","usuario":"daniel","valor":"110","dataHoraInsercao":"04/06/2024 15:33:26"}
+04-06-2024 15:34:36 info: Acesso de IP: ::1, Rota: /addProduct
+04-06-2024 15:34:36 info: Produto adicionado de IP: ::1, Produto: {"codigo":"233","produto":"teste1","quantidade":"5","motivo":"VENCIDO","dataVencimento":"23/12/2023","usuario":"dan","valor":"R$22","dataHoraInsercao":"04/06/2024 15:34:36"}
+04-06-2024 15:40:22 info: Acesso de IP: ::1, Rota: /exportToExcel
+04-06-2024 22:01:59 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:02:03 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:02:04 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:02:24 info: Acesso de IP: ::1, Rota: /addProduct
+04-06-2024 22:02:24 info: Produto adicionado de IP: ::1, Produto: {"codigo":"22","produto":"222","quantidade":"22","motivo":"VENCIDO","dataVencimento":"21/02/2024","usuario":"dan","valor":"R$222","dataHoraInsercao":"04/06/2024 22:02:24"}
+04-06-2024 22:05:37 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:06:53 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:06:57 info: Acesso de IP: ::1, Rota: /resetProducts
+04-06-2024 22:06:59 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:07:06 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:07:26 info: Acesso de IP: ::1, Rota: /addProduct
+04-06-2024 22:07:26 info: Produto adicionado de IP: ::1, Produto: {"codigo":"222","produto":"choc","quantidade":"5","motivo":"VENCIDO","dataVencimento":"01/02/2024","usuario":"dan","valor":"R$22","dataHoraInsercao":"04/06/2024 22:07:26"}
+04-06-2024 22:07:31 info: Acesso de IP: ::1, Rota: /exportToExcel
+04-06-2024 22:57:46 info: Acesso de IP: ::1, Rota: /getProducts
+04-06-2024 22:57:46 info: Acesso de IP: ::1, Rota: /favicon.ico
+05-06-2024 08:24:00 info: Acesso de IP: ::1, Rota: /getProducts
+05-06-2024 08:24:00 info: Acesso de IP: ::1, Rota: /favicon.ico

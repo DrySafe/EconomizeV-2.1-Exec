@@ -1,0 +1,12 @@
+[
+    {
+        "codigo": "22",
+        "produto": "222",
+        "quantidade": "22",
+        "motivo": "VENCIDO",
+        "dataVencimento": "21/02/2024",
+        "usuario": "dan",
+        "valor": "R$222",
+        "dataHoraInsercao": "04/06/2024 22:02:24"
+    }
+]
