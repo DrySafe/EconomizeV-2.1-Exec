@@ -2,6 +2,18 @@ import { productCodes, productNames, userNames, setEditingRow, clearEditingState
 
 let productCount = 0;
 
+// Função utilitária para converter data brasileira para ISO
+function formatDateToISO(brazilianDate) {
+    if (!brazilianDate || !brazilianDate.includes('/')) return '';
+    
+    const parts = brazilianDate.split('/');
+    if (parts.length === 3) {
+        // parts[0] = dia, parts[1] = mês, parts[2] = ano
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return brazilianDate;
+}
+
 export function addProductToTable(produto) {
     productCount++;
     const tableBody = document.getElementById('productTable').querySelector('tbody');
@@ -11,6 +23,9 @@ export function addProductToTable(produto) {
     if (produto.id) {
         row.setAttribute('data-product-id', produto.id);
     }
+
+    // Verificar se existe dataUltimaModificacao, senão usar a data de inserção
+    const dataUltimaModificacao = produto.dataUltimaModificacao || produto.dataHoraInsercao;
 
     row.innerHTML = `
         <td>${productCount}</td>
@@ -22,6 +37,7 @@ export function addProductToTable(produto) {
         <td>${escapeHtml(produto.dataVencimento || '')}</td>
         <td>${escapeHtml(produto.usuario)}</td>
         <td>${escapeHtml(produto.dataHoraInsercao)}</td>
+        <td>${escapeHtml(dataUltimaModificacao)}</td>
         <td>
             <button class="edit-button" onclick="editProduct(this)" title="Editar produto">
                 ✏️ Editar
@@ -50,13 +66,12 @@ export function editProduct(button) {
         document.getElementById('motivo').value = getTextContent(row.children[5]);
         
         const dataVencimento = getTextContent(row.children[6]);
-        if (dataVencimento) {
-            // Converter data brasileira para formato ISO se necessário
-            const dateParts = dataVencimento.split('/');
-            if (dateParts.length === 3) {
-                const isoDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-                document.getElementById('dataVencimento').value = isoDate;
-            }
+        if (dataVencimento && dataVencimento.trim()) {
+            // Converter data brasileira DD/MM/YYYY para formato ISO YYYY-MM-DD
+            const isoDate = formatDateToISO(dataVencimento);
+            document.getElementById('dataVencimento').value = isoDate;
+        } else {
+            document.getElementById('dataVencimento').value = '';
         }
         
         document.getElementById('usuario').value = getTextContent(row.children[7]);
@@ -131,7 +146,8 @@ export function updateProductInTable(row, produto) {
         row.children[5].textContent = produto.motivo;
         row.children[6].textContent = produto.dataVencimento || '';
         row.children[7].textContent = produto.usuario;
-        row.children[8].textContent = produto.dataHoraInsercao;
+        // Manter a data de criação original (children[8])
+        row.children[9].textContent = produto.dataUltimaModificacao || getCurrentDateTime();
 
         // Atualizar arrays de autocomplete
         updateAutocompleteArrays(produto);
@@ -146,6 +162,12 @@ export function updateProductInTable(row, produto) {
         console.error('Erro ao atualizar produto na tabela:', error);
         alert('Erro ao atualizar produto na tabela');
     }
+}
+
+// Função auxiliar para obter data/hora atual formatada
+function getCurrentDateTime() {
+    const now = new Date();
+    return now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
 }
 
 // Função auxiliar para escapar HTML e prevenir XSS

@@ -21,11 +21,28 @@ const productsFilePath = path.join(userDataDir, 'products.json');
 // Inicialização dos produtos
 let products = [];
 
+function getCurrentDateTime() {
+    const now = new Date();
+    return now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
+}
+
 function loadProducts() {
     try {
         if (fs.existsSync(productsFilePath)) {
             const productsData = fs.readFileSync(productsFilePath, 'utf8');
             products = JSON.parse(productsData);
+            
+            // Migrar produtos antigos para novo formato se necessário
+            products = products.map(product => {
+                if (!product.dataUltimaModificacao) {
+                    return {
+                        ...product,
+                        dataUltimaModificacao: product.dataHoraInsercao || getCurrentDateTime()
+                    };
+                }
+                return product;
+            });
+            
             logger.log(`Produtos carregados: ${products.length} itens`);
         }
     } catch (error) {
@@ -56,27 +73,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Middleware de validação para produtos
-function validateProduct(req, res, next) {
-    const { codigo, produto, quantidade, motivo, usuario, valor } = req.body;
-    
-    if (!codigo || !produto || !quantidade || !motivo || !usuario || !valor) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'Todos os campos obrigatórios devem ser preenchidos' 
-        });
-    }
-    
-    if (isNaN(quantidade) || quantidade <= 0) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'Quantidade deve ser um número maior que zero' 
-        });
-    }
-    
-    next();
-}
-
 // Carregar produtos na inicialização
 loadProducts();
 
@@ -85,14 +81,55 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.post('/addProduct', validateProduct, (req, res) => {
+app.post('/addProduct', (req, res) => {
     try {
+        console.log('Dados recebidos:', req.body);
+        
+        const { codigo, produto, quantidade, motivo, usuario, valor } = req.body;
+        
+        // Validação básica
+        if (!codigo || !produto || !quantidade || !motivo || !usuario || !valor) {
+            const missingFields = [];
+            if (!codigo) missingFields.push('codigo');
+            if (!produto) missingFields.push('produto');
+            if (!quantidade) missingFields.push('quantidade');
+            if (!motivo) missingFields.push('motivo');
+            if (!usuario) missingFields.push('usuario');
+            if (!valor) missingFields.push('valor');
+            
+            console.log('Campos faltando:', missingFields);
+            
+            return res.status(400).json({ 
+                success: false, 
+                message: `Campos obrigatórios faltando: ${missingFields.join(', ')}` 
+            });
+        }
+        
+        if (isNaN(quantidade) || quantidade <= 0) {
+            console.log('Quantidade inválida:', quantidade);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Quantidade deve ser um número maior que zero' 
+            });
+        }
+
+        const currentDateTime = getCurrentDateTime();
+        
+        // Log para debug da data de vencimento
+        if (req.body.dataVencimento) {
+            console.log('Data de vencimento recebida:', req.body.dataVencimento);
+        }
+        
         const product = {
             ...req.body,
-            id: Date.now(), // Adicionar ID único
+            id: Date.now(),
+            dataHoraInsercao: req.body.dataHoraInsercao || currentDateTime,
+            dataUltimaModificacao: req.body.dataUltimaModificacao || currentDateTime,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
+        
+        console.log('Produto a ser salvo:', product);
         
         products.push(product);
         saveProductsToFile();
@@ -104,11 +141,14 @@ app.post('/addProduct', validateProduct, (req, res) => {
         });
         
         logger.log(`Produto adicionado: ${product.codigo} - ${product.produto}`);
+        console.log('Produto adicionado com sucesso');
+        
     } catch (error) {
         logger.log(`Erro ao adicionar produto: ${error.message}`);
+        console.error('Erro detalhado:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Erro interno do servidor' 
+            message: 'Erro interno do servidor: ' + error.message 
         });
     }
 });
@@ -130,8 +170,11 @@ app.get('/getProducts', (req, res) => {
     }
 });
 
-app.put('/updateProduct/:id', validateProduct, (req, res) => {
+app.put('/updateProduct/:id', (req, res) => {
     try {
+        console.log('Atualizando produto ID:', req.params.id);
+        console.log('Dados para atualização:', req.body);
+        
         const productId = parseInt(req.params.id);
         const productIndex = products.findIndex(p => p.id === productId);
         
@@ -142,9 +185,13 @@ app.put('/updateProduct/:id', validateProduct, (req, res) => {
             });
         }
         
+        const originalProduct = products[productIndex];
+        
         products[productIndex] = {
-            ...products[productIndex],
+            ...originalProduct,
             ...req.body,
+            dataHoraInsercao: originalProduct.dataHoraInsercao, // Manter data original
+            dataUltimaModificacao: getCurrentDateTime(), // Atualizar data de modificação
             updatedAt: new Date().toISOString()
         };
         
@@ -156,7 +203,7 @@ app.put('/updateProduct/:id', validateProduct, (req, res) => {
             product: products[productIndex]
         });
         
-        logger.log(`Produto atualizado: ${products[productIndex].codigo}`);
+        logger.log(`Produto atualizado: ${products[productIndex].codigo} - Modificado em: ${products[productIndex].dataUltimaModificacao}`);
     } catch (error) {
         logger.log(`Erro ao atualizar produto: ${error.message}`);
         res.status(500).json({ 
@@ -211,7 +258,8 @@ app.get('/exportToExcel', async (req, res) => {
             { header: 'Motivo', key: 'motivo', width: 15 },
             { header: 'Data de Vencimento', key: 'dataVencimento', width: 20 },
             { header: 'Usuário', key: 'usuario', width: 15 },
-            { header: 'Data e Hora de Inserção', key: 'dataHoraInsercao', width: 25 }
+            { header: 'Data de Criação', key: 'dataHoraInsercao', width: 20 },
+            { header: 'Última Modificação', key: 'dataUltimaModificacao', width: 20 }
         ];
 
         // Adicionar dados
@@ -225,7 +273,8 @@ app.get('/exportToExcel', async (req, res) => {
                 motivo: product.motivo,
                 dataVencimento: product.motivo === 'VENCIDO' ? product.dataVencimento : '',
                 usuario: product.usuario,
-                dataHoraInsercao: product.dataHoraInsercao
+                dataHoraInsercao: product.dataHoraInsercao,
+                dataUltimaModificacao: product.dataUltimaModificacao || product.dataHoraInsercao
             });
         });
 

@@ -18,7 +18,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     padding: 30px;
-    max-width: 1200px;
+    max-width: 1400px; /* Aumentar largura para acomodar nova coluna */
     width: 95%;
     margin: 20px auto;
     position: relative;
@@ -178,8 +178,9 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-    font-size: 14px;
+    font-size: 13px; /* Reduzir tamanho da fonte para acomodar nova coluna */
     background: #fff;
+    min-width: 1200px; /* Largura mínima para rolagem horizontal */
 }
 
 table, th, td {
@@ -187,9 +188,11 @@ table, th, td {
 }
 
 th, td {
-    padding: 12px 8px;
+    padding: 10px 6px; /* Reduzir padding para economizar espaço */
     text-align: left;
     vertical-align: middle;
+    word-wrap: break-word;
+    max-width: 150px; /* Limitar largura máxima das células */
 }
 
 th {
@@ -197,20 +200,45 @@ th {
     color: #fff;
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.5px;
     position: sticky;
     top: 0;
     z-index: 10;
+    white-space: nowrap; /* Evitar quebra de linha no cabeçalho */
 }
+
+/* Tamanhos específicos para colunas */
+th:nth-child(1) { width: 40px; } /* # */
+th:nth-child(2) { width: 80px; } /* Código */
+th:nth-child(3) { width: 90px; } /* Valor */
+th:nth-child(4) { width: 180px; } /* Produto */
+th:nth-child(5) { width: 80px; } /* Quantidade */
+th:nth-child(6) { width: 90px; } /* Motivo */
+th:nth-child(7) { width: 120px; } /* Data Vencimento */
+th:nth-child(8) { width: 100px; } /* Usuário */
+th:nth-child(9) { width: 140px; } /* Data Criação */
+th:nth-child(10) { width: 140px; } /* Última Modificação */
+th:nth-child(11) { width: 120px; } /* Ações */
 
 td {
     background-color: #fff;
     transition: background-color 0.3s ease;
+    font-size: 12px;
+}
+
+/* Destaque para a nova coluna de modificação */
+td:nth-child(10) {
+    background-color: #fff8e1;
+    font-weight: 500;
 }
 
 tr:nth-child(even) td {
     background-color: #f8f9fa;
+}
+
+tr:nth-child(even) td:nth-child(10) {
+    background-color: #fff3c4;
 }
 
 tr:hover td {
@@ -218,17 +246,24 @@ tr:hover td {
     transform: scale(1.01);
 }
 
+tr:hover td:nth-child(10) {
+    background-color: #ffeb3b;
+}
+
 /* Botões da tabela */
 .edit-button, .delete-button {
     border: none;
-    padding: 6px 12px;
+    padding: 5px 8px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 500;
     transition: all 0.3s ease;
-    margin: 2px;
-    min-width: 70px;
+    margin: 1px;
+    min-width: 50px;
+    display: block;
+    width: 100%;
+    margin-bottom: 2px;
 }
 
 .edit-button {
@@ -397,10 +432,25 @@ tr:hover td {
 }
 
 /* Responsive */
+@media only screen and (max-width: 1200px) {
+    .container {
+        max-width: 100%;
+        padding: 20px;
+    }
+    
+    table {
+        font-size: 11px;
+    }
+    
+    th, td {
+        padding: 8px 4px;
+    }
+}
+
 @media only screen and (max-width: 768px) {
     .container {
         width: 98%;
-        padding: 20px;
+        padding: 15px;
         margin: 10px auto;
     }
     
@@ -424,22 +474,27 @@ tr:hover td {
     }
     
     .form-container {
-        padding: 20px;
+        padding: 15px;
     }
     
     table {
-        font-size: 12px;
+        font-size: 10px;
+        min-width: 800px;
     }
     
     th, td {
-        padding: 8px 4px;
+        padding: 6px 3px;
     }
     
     .edit-button, .delete-button {
-        padding: 4px 8px;
-        font-size: 10px;
-        min-width: 60px;
+        padding: 3px 6px;
+        font-size: 9px;
+        min-width: 40px;
     }
+    
+    /* Colunas específicas para mobile */
+    th:nth-child(4) { width: 120px; } /* Produto - reduzir */
+    th:nth-child(9), th:nth-child(10) { width: 100px; } /* Datas - reduzir */
 }
 
 @media only screen and (max-width: 480px) {
@@ -447,6 +502,7 @@ tr:hover td {
         width: 100%;
         margin: 5px auto;
         border-radius: 0;
+        padding: 10px;
     }
     
     .stats-grid {
@@ -459,11 +515,18 @@ tr:hover td {
     }
     
     table {
-        font-size: 11px;
+        font-size: 9px;
+        min-width: 700px;
     }
     
     th, td {
-        padding: 6px 3px;
+        padding: 4px 2px;
+    }
+    
+    .edit-button, .delete-button {
+        padding: 2px 4px;
+        font-size: 8px;
+        min-width: 35px;
     }
 }
 
@@ -499,4 +562,14 @@ select:focus {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #f57c00;
+}
+
+/* Indicador visual para produtos editados */
+.recently-edited {
+    animation: highlightEdit 3s ease-out;
+}
+
+@keyframes highlightEdit {
+    0% { background-color: #4caf50; }
+    100% { background-color: transparent; }
 }

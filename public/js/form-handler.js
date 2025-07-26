@@ -21,31 +21,31 @@ export function clearEditingState() {
 function validateForm(formData) {
     const errors = [];
     
-    if (!formData.codigo.trim()) {
+    if (!formData.codigo || !formData.codigo.trim()) {
         errors.push('Código do produto é obrigatório');
     }
     
-    if (!formData.produto.trim()) {
+    if (!formData.produto || !formData.produto.trim()) {
         errors.push('Nome do produto é obrigatório');
     }
     
-    if (!formData.valor.trim() || formData.valor === 'R$') {
+    if (!formData.valor || formData.valor.trim() === '' || formData.valor.trim() === 'R$') {
         errors.push('Valor do produto é obrigatório');
     }
     
-    if (!formData.quantidade || formData.quantidade <= 0) {
+    if (!formData.quantidade || isNaN(formData.quantidade) || formData.quantidade <= 0) {
         errors.push('Quantidade deve ser maior que zero');
     }
     
-    if (!formData.motivo) {
+    if (!formData.motivo || formData.motivo.trim() === '') {
         errors.push('Motivo é obrigatório');
     }
     
-    if (formData.motivo === 'VENCIDO' && !formData.dataVencimento) {
+    if (formData.motivo === 'VENCIDO' && (!formData.dataVencimento || formData.dataVencimento.trim() === '')) {
         errors.push('Data de vencimento é obrigatória para produtos vencidos');
     }
     
-    if (!formData.usuario.trim()) {
+    if (!formData.usuario || !formData.usuario.trim()) {
         errors.push('Usuário é obrigatório');
     }
     
@@ -72,6 +72,18 @@ function formatCurrency(value) {
     }
     
     return value.startsWith('R$') ? value : `R$ ${numericValue}`;
+}
+
+// Função para converter data do formato ISO para brasileiro
+function formatDateToBrazilian(isoDate) {
+    if (!isoDate || !isoDate.includes('-')) return '';
+    
+    const parts = isoDate.split('-');
+    if (parts.length === 3) {
+        // parts[0] = ano, parts[1] = mês, parts[2] = dia
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return isoDate;
 }
 
 // Função para limpar o formulário
@@ -105,19 +117,24 @@ export function handleFormSubmit(event) {
 
         // Formatar data de vencimento se necessário
         if (formData.motivo === 'VENCIDO' && formData.dataVencimento) {
-            const date = new Date(formData.dataVencimento);
-            formData.dataVencimento = date.toLocaleDateString('pt-BR', { 
-                year: 'numeric', 
-                month: '2-digit', 
-                day: '2-digit' 
-            });
+            // Converter do formato ISO (YYYY-MM-DD) para brasileiro (DD/MM/YYYY)
+            formData.dataVencimento = formatDateToBrazilian(formData.dataVencimento);
         } else {
             formData.dataVencimento = '';
         }
 
         // Adicionar timestamp
         const now = new Date();
-        formData.dataHoraInsercao = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
+        const currentDateTime = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
+        
+        if (editingRow === null) {
+            // Novo produto
+            formData.dataHoraInsercao = currentDateTime;
+            formData.dataUltimaModificacao = currentDateTime;
+        } else {
+            // Produto sendo editado
+            formData.dataUltimaModificacao = currentDateTime;
+        }
 
         if (editingRow !== null) {
             // Modo edição
@@ -129,7 +146,7 @@ export function handleFormSubmit(event) {
 
     } catch (error) {
         console.error('Erro ao processar formulário:', error);
-        alert('Erro ao processar dados do formulário');
+        alert('Erro ao processar dados do formulário: ' + error.message);
     }
 }
 
@@ -141,7 +158,12 @@ function addProduct(productData) {
         },
         body: JSON.stringify(productData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             alert('Produto adicionado com sucesso!');
@@ -154,7 +176,7 @@ function addProduct(productData) {
     })
     .catch(error => {
         console.error('Erro na requisição:', error);
-        alert('Erro de conexão ao adicionar produto');
+        alert('Erro de conexão ao adicionar produto: ' + error.message);
     });
 }
 
