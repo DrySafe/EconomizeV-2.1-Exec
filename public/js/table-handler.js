@@ -1,18 +1,6 @@
-import { productCodes, productNames, userNames, setEditingRow, clearEditingState } from './form-handler.js';
+import { productCodes, productNames, userNames, setEditingRow, clearEditingState, formatDateToISO } from './form-handler.js';
 
 let productCount = 0;
-
-// Função utilitária para converter data brasileira para ISO
-function formatDateToISO(brazilianDate) {
-    if (!brazilianDate || !brazilianDate.includes('/')) return '';
-    
-    const parts = brazilianDate.split('/');
-    if (parts.length === 3) {
-        // parts[0] = dia, parts[1] = mês, parts[2] = ano
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    return brazilianDate;
-}
 
 export function addProductToTable(produto) {
     productCount++;
@@ -63,26 +51,34 @@ export function editProduct(button) {
         document.getElementById('valor').value = getTextContent(row.children[2]);
         document.getElementById('produto').value = getTextContent(row.children[3]);
         document.getElementById('quantidade').value = getTextContent(row.children[4]);
-        document.getElementById('motivo').value = getTextContent(row.children[5]);
         
+        const motivo = getTextContent(row.children[5]);
+        document.getElementById('motivo').value = motivo;
+        
+        // CORREÇÃO: Processar data de vencimento corretamente
         const dataVencimento = getTextContent(row.children[6]);
-        if (dataVencimento && dataVencimento.trim()) {
-            // Converter data brasileira DD/MM/YYYY para formato ISO YYYY-MM-DD
-            const isoDate = formatDateToISO(dataVencimento);
-            document.getElementById('dataVencimento').value = isoDate;
+        const dataVencimentoInput = document.getElementById('dataVencimento');
+        const dataVencimentoGroup = document.getElementById('dataVencimentoGroup');
+        
+        if (motivo === 'VENCIDO') {
+            dataVencimentoGroup.style.display = 'block';
+            dataVencimentoInput.required = true;
+            
+            if (dataVencimento && dataVencimento.trim()) {
+                // Converter data brasileira DD/MM/YYYY para formato ISO YYYY-MM-DD
+                const isoDate = formatDateToISO(dataVencimento);
+                dataVencimentoInput.value = isoDate;
+                console.log('Data carregada para edição:', dataVencimento, '->', isoDate);
+            } else {
+                dataVencimentoInput.value = '';
+            }
         } else {
-            document.getElementById('dataVencimento').value = '';
+            dataVencimentoGroup.style.display = 'none';
+            dataVencimentoInput.required = false;
+            dataVencimentoInput.value = '';
         }
         
         document.getElementById('usuario').value = getTextContent(row.children[7]);
-
-        // Mostrar campo de data de vencimento se necessário
-        const motivo = getTextContent(row.children[5]);
-        if (motivo === 'VENCIDO') {
-            document.getElementById('dataVencimentoGroup').style.display = 'block';
-        } else {
-            document.getElementById('dataVencimentoGroup').style.display = 'none';
-        }
 
         // Scroll para o formulário
         document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });

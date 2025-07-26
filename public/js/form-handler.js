@@ -74,16 +74,57 @@ function formatCurrency(value) {
     return value.startsWith('R$') ? value : `R$ ${numericValue}`;
 }
 
-// Função para converter data do formato ISO para brasileiro
+// Função CORRIGIDA para converter data do formato ISO para brasileiro SEM perder um dia
 function formatDateToBrazilian(isoDate) {
     if (!isoDate || !isoDate.includes('-')) return '';
     
-    const parts = isoDate.split('-');
-    if (parts.length === 3) {
-        // parts[0] = ano, parts[1] = mês, parts[2] = dia
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    try {
+        // Criar data local sem conversão de fuso horário
+        const parts = isoDate.split('-');
+        if (parts.length === 3) {
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            const day = parseInt(parts[2]);
+            
+            // Validar se é uma data válida
+            if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                // Formatar com zero à esquerda se necessário
+                const dayFormatted = day.toString().padStart(2, '0');
+                const monthFormatted = month.toString().padStart(2, '0');
+                return `${dayFormatted}/${monthFormatted}/${year}`;
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao formatar data:', error);
     }
+    
     return isoDate;
+}
+
+// Função CORRIGIDA para converter data brasileira para formato ISO SEM perder um dia
+function formatDateToISO(brazilianDate) {
+    if (!brazilianDate || !brazilianDate.includes('/')) return '';
+    
+    try {
+        const parts = brazilianDate.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            const year = parseInt(parts[2]);
+            
+            // Validar se é uma data válida
+            if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                // Formatar com zero à esquerda se necessário
+                const dayFormatted = day.toString().padStart(2, '0');
+                const monthFormatted = month.toString().padStart(2, '0');
+                return `${year}-${monthFormatted}-${dayFormatted}`;
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao converter data para ISO:', error);
+    }
+    
+    return brazilianDate;
 }
 
 // Função para limpar o formulário
@@ -91,6 +132,7 @@ function clearForm() {
     document.getElementById('productForm').reset();
     document.getElementById('valor').value = 'R$';
     document.getElementById('dataVencimentoGroup').style.display = 'none';
+    document.getElementById('dataVencimento').required = false;
 }
 
 export function handleFormSubmit(event) {
@@ -98,12 +140,15 @@ export function handleFormSubmit(event) {
 
     try {
         // Coleta dados do formulário
+        const rawDataVencimento = document.getElementById('dataVencimento').value;
+        const motivo = document.getElementById('motivo').value;
+        
         const formData = {
             codigo: document.getElementById('codigo').value.trim(),
             produto: document.getElementById('produto').value.trim(),
             quantidade: parseInt(document.getElementById('quantidade').value),
-            motivo: document.getElementById('motivo').value,
-            dataVencimento: document.getElementById('dataVencimento').value,
+            motivo: motivo,
+            dataVencimento: rawDataVencimento,
             valor: formatCurrency(document.getElementById('valor').value),
             usuario: document.getElementById('usuario').value.trim()
         };
@@ -115,10 +160,11 @@ export function handleFormSubmit(event) {
             return;
         }
 
-        // Formatar data de vencimento se necessário
+        // Processar data de vencimento corretamente
         if (formData.motivo === 'VENCIDO' && formData.dataVencimento) {
-            // Converter do formato ISO (YYYY-MM-DD) para brasileiro (DD/MM/YYYY)
+            // Converter do formato ISO (YYYY-MM-DD) para brasileiro (DD/MM/YYYY) SEM perder dia
             formData.dataVencimento = formatDateToBrazilian(formData.dataVencimento);
+            console.log('Data convertida:', rawDataVencimento, '->', formData.dataVencimento);
         } else {
             formData.dataVencimento = '';
         }
@@ -132,7 +178,9 @@ export function handleFormSubmit(event) {
             formData.dataHoraInsercao = currentDateTime;
             formData.dataUltimaModificacao = currentDateTime;
         } else {
-            // Produto sendo editado
+            // Produto sendo editado - manter data de inserção original
+            const originalDataInsercao = editingRow.children[8].textContent;
+            formData.dataHoraInsercao = originalDataInsercao;
             formData.dataUltimaModificacao = currentDateTime;
         }
 
@@ -272,6 +320,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Tornar editProduct acessível no escopo global
-import { editProduct } from './table-handler.js';
-window.editProduct = editProduct;
+// Exportar as funções de conversão de data para uso em outros módulos
+export { formatDateToBrazilian, formatDateToISO };

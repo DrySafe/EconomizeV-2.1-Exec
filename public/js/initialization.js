@@ -35,6 +35,56 @@ function showError(message) {
     }
 }
 
+// Função para converter data brasileira (DD/MM/YYYY) para objeto Date
+function parseDataBrasileira(dataBrasil) {
+    if (!dataBrasil || !dataBrasil.includes('/')) return null;
+    
+    const parts = dataBrasil.split('/');
+    if (parts.length !== 3) return null;
+    
+    const dia = parseInt(parts[0]);
+    const mes = parseInt(parts[1]) - 1; // Mês no JavaScript é 0-indexado
+    const ano = parseInt(parts[2]);
+    
+    // Validar se são números válidos
+    if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+    if (dia < 1 || dia > 31 || mes < 0 || mes > 11 || ano < 1900) return null;
+    
+    return new Date(ano, mes, dia);
+}
+
+// Função para verificar se um produto está realmente vencido
+function isProdutoVencido(produto) {
+    // Se o motivo não é VENCIDO, não está vencido
+    if (produto.motivo !== 'VENCIDO') return false;
+    
+    // Se não tem data de vencimento, considerar como vencido (caso antigo)
+    if (!produto.dataVencimento || produto.dataVencimento.trim() === '') return true;
+    
+    try {
+        const dataVencimento = parseDataBrasileira(produto.dataVencimento);
+        if (!dataVencimento) {
+            console.warn('Data de vencimento inválida:', produto.dataVencimento);
+            return true; // Se não conseguir parsear, considerar vencido por segurança
+        }
+        
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0); // Zerar horas para comparar apenas a data
+        dataVencimento.setHours(0, 0, 0, 0);
+        
+        // Produto está vencido se a data de vencimento for anterior a hoje
+        const vencido = dataVencimento < hoje;
+        
+        // Log para debug
+        console.log(`Produto ${produto.codigo}: Data vencimento ${produto.dataVencimento}, Hoje: ${hoje.toLocaleDateString('pt-BR')}, Vencido: ${vencido}`);
+        
+        return vencido;
+    } catch (error) {
+        console.error('Erro ao verificar vencimento do produto:', produto.codigo, error);
+        return true; // Em caso de erro, considerar vencido por segurança
+    }
+}
+
 function loadProducts() {
     showLoading(true);
     
@@ -88,9 +138,27 @@ function updateProductStats(products) {
     if (!statsContainer) return;
     
     const totalProducts = products.length;
-    const vencidos = products.filter(p => p.motivo === 'VENCIDO').length;
+    
+    // CORREÇÃO: Contar apenas produtos realmente vencidos (data anterior a hoje)
+    const vencidos = products.filter(produto => isProdutoVencido(produto)).length;
+    
+    // Contar produtos com motivo VENCIDO mas que ainda não venceram (para debug)
+    const comMotivoVencido = products.filter(p => p.motivo === 'VENCIDO').length;
+    const vencidosProximos = comMotivoVencido - vencidos; // Produtos próximos do vencimento
+    
     const usoLoja = products.filter(p => p.motivo === 'USO LOJA').length;
     const avariados = products.filter(p => p.motivo === 'AVARIADO').length;
+    const restaurante = products.filter(p => p.motivo === 'RESTAURANTE').length;
+    
+    // Log para debug
+    console.log(`Estatísticas atualizadas:
+        - Total: ${totalProducts}
+        - Com motivo VENCIDO: ${comMotivoVencido}
+        - Realmente vencidos: ${vencidos}
+        - Próximos do vencimento: ${vencidosProximos}
+        - Uso loja: ${usoLoja}
+        - Avariados: ${avariados}
+        - Restaurante: ${restaurante}`);
     
     statsContainer.innerHTML = `
         <div class="stats-grid">
@@ -99,9 +167,15 @@ function updateProductStats(products) {
                 <span class="stat-label">Total</span>
             </div>
             <div class="stat-item">
-                <span class="stat-number">${vencidos}</span>
+                <span class="stat-number" style="color: #e74c3c;">${vencidos}</span>
                 <span class="stat-label">Vencidos</span>
             </div>
+            ${vencidosProximos > 0 ? `
+            <div class="stat-item">
+                <span class="stat-number" style="color: #f39c12;">${vencidosProximos}</span>
+                <span class="stat-label">Próximos Venc.</span>
+            </div>
+            ` : ''}
             <div class="stat-item">
                 <span class="stat-number">${usoLoja}</span>
                 <span class="stat-label">Uso Loja</span>
@@ -110,6 +184,12 @@ function updateProductStats(products) {
                 <span class="stat-number">${avariados}</span>
                 <span class="stat-label">Avariados</span>
             </div>
+            ${restaurante > 0 ? `
+            <div class="stat-item">
+                <span class="stat-number">${restaurante}</span>
+                <span class="stat-label">Restaurante</span>
+            </div>
+            ` : ''}
         </div>
     `;
 }
