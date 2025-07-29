@@ -26,6 +26,52 @@ function getCurrentDateTime() {
     return now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
 }
 
+// Função para calcular dias até vencimento (mesma lógica do frontend)
+function calcularDiasParaVencimento(dataVencimento) {
+    if (!dataVencimento || dataVencimento.trim() === '') {
+        return 'N/A';
+    }
+
+    try {
+        // Converter data brasileira DD/MM/YYYY para objeto Date
+        const parts = dataVencimento.split('/');
+        if (parts.length !== 3) {
+            return 'N/A';
+        }
+
+        const dia = parseInt(parts[0]);
+        const mes = parseInt(parts[1]) - 1; // Mês no JavaScript é 0-indexado
+        const ano = parseInt(parts[2]);
+
+        // Validar se são números válidos
+        if (isNaN(dia) || isNaN(mes) || isNaN(ano)) {
+            return 'N/A';
+        }
+
+        const dataVenc = new Date(ano, mes, dia);
+        const hoje = new Date();
+        
+        // Zerar horas para comparar apenas a data
+        hoje.setHours(0, 0, 0, 0);
+        dataVenc.setHours(0, 0, 0, 0);
+
+        // Calcular diferença em dias
+        const diferenca = Math.ceil((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+
+        if (diferenca < 0) {
+            return 'VENCIDO';
+        } else if (diferenca === 0) {
+            return 'HOJE';
+        } else {
+            return `${diferenca} dia${diferenca > 1 ? 's' : ''}`;
+        }
+
+    } catch (error) {
+        console.error('Erro ao calcular dias para vencimento:', error);
+        return 'ERRO';
+    }
+}
+
 function loadProducts() {
     try {
         if (fs.existsSync(productsFilePath)) {
@@ -248,7 +294,7 @@ app.get('/exportToExcel', async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Produtos');
 
-        // Definir colunas
+        // Definir colunas - INCLUINDO A NOVA COLUNA DE STATUS
         worksheet.columns = [
             { header: '#', key: 'id', width: 8 },
             { header: 'Código', key: 'codigo', width: 12 },
@@ -257,6 +303,7 @@ app.get('/exportToExcel', async (req, res) => {
             { header: 'Quantidade', key: 'quantidade', width: 12 },
             { header: 'Motivo', key: 'motivo', width: 15 },
             { header: 'Data de Vencimento', key: 'dataVencimento', width: 20 },
+            { header: 'Status Vencimento', key: 'statusVencimento', width: 18 },
             { header: 'Usuário', key: 'usuario', width: 15 },
             { header: 'Data de Criação', key: 'dataHoraInsercao', width: 20 },
             { header: 'Última Modificação', key: 'dataUltimaModificacao', width: 20 }
@@ -264,6 +311,10 @@ app.get('/exportToExcel', async (req, res) => {
 
         // Adicionar dados
         products.forEach((product, index) => {
+            const statusVencimento = product.motivo === 'VENCIDO' 
+                ? calcularDiasParaVencimento(product.dataVencimento)
+                : 'N/A';
+
             worksheet.addRow({
                 id: index + 1,
                 codigo: product.codigo,
@@ -272,6 +323,7 @@ app.get('/exportToExcel', async (req, res) => {
                 quantidade: product.quantidade,
                 motivo: product.motivo,
                 dataVencimento: product.motivo === 'VENCIDO' ? product.dataVencimento : '',
+                statusVencimento: statusVencimento,
                 usuario: product.usuario,
                 dataHoraInsercao: product.dataHoraInsercao,
                 dataUltimaModificacao: product.dataUltimaModificacao || product.dataHoraInsercao
@@ -290,6 +342,7 @@ app.get('/exportToExcel', async (req, res) => {
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 
                 if (rowNumber === 1) {
+                    // Cabeçalho
                     cell.fill = {
                         type: 'pattern',
                         pattern: 'solid',
@@ -297,11 +350,49 @@ app.get('/exportToExcel', async (req, res) => {
                     };
                     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
                 } else {
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: rowNumber % 2 === 0 ? { argb: 'FFF6E7' } : { argb: 'FFFFFFFF' }
-                    };
+                    // Dados - colorir coluna de status de vencimento
+                    if (colNumber === 8) { // Coluna Status Vencimento
+                        const statusText = cell.value;
+                        if (statusText === 'VENCIDO' || statusText === 'HOJE') {
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFEBEE' }
+                            };
+                            cell.font = { color: { argb: 'FFC62828' }, bold: true };
+                        } else if (statusText && statusText.includes('dia') && !statusText.includes('dias')) {
+                            // 1 dia - próximo do vencimento
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFF3E0' }
+                            };
+                            cell.font = { color: { argb: 'FFEF6C00' }, bold: true };
+                        } else if (statusText && statusText.match(/^[1-7] dias$/)) {
+                            // 2-7 dias - próximo do vencimento
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFF3E0' }
+                            };
+                            cell.font = { color: { argb: 'FFEF6C00' }, bold: true };
+                        } else if (statusText && statusText.includes('dias') && statusText !== 'N/A') {
+                            // 8+ dias - normal
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFE8F5E8' }
+                            };
+                            cell.font = { color: { argb: 'FF2E7D32' }, bold: true };
+                        }
+                    } else {
+                        // Outras colunas - alternação de cores normal
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: rowNumber % 2 === 0 ? { argb: 'FFF6E7' } : { argb: 'FFFFFFFF' }
+                        };
+                    }
                 }
             });
         });

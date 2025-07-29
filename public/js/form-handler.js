@@ -52,26 +52,100 @@ function validateForm(formData) {
     return errors;
 }
 
-// Função para formatar valor monetário
+// Função APRIMORADA para formatar valor monetário brasileiro
 function formatCurrency(value) {
     if (!value || value === 'R$') return 'R$ 0,00';
     
     // Remove tudo exceto números, vírgulas e pontos
-    const numericValue = value.replace(/[^\d,.-]/g, '');
+    let numericValue = value.replace(/[^\d,.-]/g, '');
     
     // Se não há valor numérico, retorna formato padrão
     if (!numericValue) return 'R$ 0,00';
     
-    // Converte para formato brasileiro se necessário
-    if (numericValue.includes('.') && !numericValue.includes(',')) {
-        // Formato americano (123.45) -> brasileiro (123,45)
-        const parts = numericValue.split('.');
-        if (parts.length === 2 && parts[1].length <= 2) {
-            return `R$ ${parts[0]},${parts[1].padEnd(2, '0')}`;
+    // Remove espaços e caracteres extras
+    numericValue = numericValue.trim();
+    
+    // Casos especiais para formatação automática
+    if (numericValue.match(/^\d+$/)) {
+        // Apenas números inteiros (ex: "532" -> "5,32", "49" -> "0,49", "6200" -> "62,00")
+        const num = parseInt(numericValue);
+        
+        if (num === 0) {
+            return 'R$ 0,00';
+        }
+        
+        if (num < 10) {
+            // 1-9: adiciona 0, antes (ex: "5" -> "0,05")
+            return `R$ 0,0${num}`;
+        } else if (num < 100) {
+            // 10-99: adiciona 0, antes (ex: "49" -> "0,49")
+            return `R$ 0,${num.toString().padStart(2, '0')}`;
+        } else {
+            // 100+: divide por 100 para obter centavos (ex: "532" -> "5,32")
+            const reais = Math.floor(num / 100);
+            const centavos = num % 100;
+            return `R$ ${reais},${centavos.toString().padStart(2, '0')}`;
         }
     }
     
+    // Se já tem vírgula, processar formato brasileiro
+    if (numericValue.includes(',')) {
+        const parts = numericValue.split(',');
+        if (parts.length === 2) {
+            const reais = parts[0] || '0';
+            let centavos = parts[1];
+            
+            // Limitar centavos a 2 dígitos
+            if (centavos.length > 2) {
+                centavos = centavos.substring(0, 2);
+            } else if (centavos.length === 1) {
+                centavos = centavos + '0';
+            } else if (centavos.length === 0) {
+                centavos = '00';
+            }
+            
+            return `R$ ${reais},${centavos}`;
+        }
+    }
+    
+    // Se tem ponto (formato americano), converter para brasileiro
+    if (numericValue.includes('.') && !numericValue.includes(',')) {
+        const parts = numericValue.split('.');
+        if (parts.length === 2 && parts[1].length <= 2) {
+            const reais = parts[0] || '0';
+            const centavos = parts[1].padEnd(2, '0');
+            return `R$ ${reais},${centavos}`;
+        }
+    }
+    
+    // Se tem múltiplos pontos (separadores de milhares), processar
+    if (numericValue.includes('.') && numericValue.split('.').length > 2) {
+        // Assumir que o último ponto são os centavos
+        const parts = numericValue.split('.');
+        const centavos = parts.pop().padEnd(2, '0').substring(0, 2);
+        const reais = parts.join('');
+        return `R$ ${reais},${centavos}`;
+    }
+    
+    // Fallback: tentar interpretar como número decimal
+    try {
+        const parsed = parseFloat(numericValue.replace(',', '.'));
+        if (!isNaN(parsed)) {
+            return `R$ ${parsed.toFixed(2).replace('.', ',')}`;
+        }
+    } catch (e) {
+        console.warn('Erro ao parsear valor:', numericValue);
+    }
+    
+    // Se nada funcionou, retornar o valor original com prefixo R$
     return value.startsWith('R$') ? value : `R$ ${numericValue}`;
+}
+
+// Função para validar se o valor monetário está no formato correto
+function isValidCurrency(value) {
+    // Padrão: R$ seguido de números, vírgula e dois dígitos
+    const pattern = /^R\$ \d+,\d{2}$/;
+    return pattern.test(value);
 }
 
 // Função CORRIGIDA para converter data do formato ISO para brasileiro SEM perder um dia
@@ -130,7 +204,7 @@ function formatDateToISO(brazilianDate) {
 // Função para limpar o formulário
 function clearForm() {
     document.getElementById('productForm').reset();
-    document.getElementById('valor').value = 'R$';
+    document.getElementById('valor').value = 'R$ 0,00';
     document.getElementById('dataVencimentoGroup').style.display = 'none';
     document.getElementById('dataVencimento').required = false;
 }
@@ -142,6 +216,7 @@ export function handleFormSubmit(event) {
         // Coleta dados do formulário
         const rawDataVencimento = document.getElementById('dataVencimento').value;
         const motivo = document.getElementById('motivo').value;
+        const rawValor = document.getElementById('valor').value;
         
         const formData = {
             codigo: document.getElementById('codigo').value.trim(),
@@ -149,7 +224,7 @@ export function handleFormSubmit(event) {
             quantidade: parseInt(document.getElementById('quantidade').value),
             motivo: motivo,
             dataVencimento: rawDataVencimento,
-            valor: formatCurrency(document.getElementById('valor').value),
+            valor: formatCurrency(rawValor),
             usuario: document.getElementById('usuario').value.trim()
         };
 
@@ -157,6 +232,12 @@ export function handleFormSubmit(event) {
         const errors = validateForm(formData);
         if (errors.length > 0) {
             alert('Erro de validação:\n' + errors.join('\n'));
+            return;
+        }
+
+        // Verificar se o valor está formatado corretamente
+        if (!isValidCurrency(formData.valor)) {
+            alert('Valor deve estar no formato correto (ex: R$ 10,50)');
             return;
         }
 
@@ -294,11 +375,14 @@ function updateAutocompleteArrays(productData) {
     }
 }
 
-// Configurar formatação automática do campo valor
+// Configurar formatação automática do campo valor com lógica aprimorada
 document.addEventListener('DOMContentLoaded', function() {
     const valorInput = document.getElementById('valor');
     
     if (valorInput) {
+        // Inicializar com valor padrão
+        valorInput.value = 'R$ 0,00';
+        
         valorInput.addEventListener('input', function(e) {
             const cursorPosition = e.target.selectionStart;
             const value = e.target.value;
@@ -313,8 +397,48 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         valorInput.addEventListener('focus', function(e) {
-            if (e.target.value === 'R$') {
+            // Se o valor é padrão, selecionar tudo para facilitar edição
+            if (e.target.value === 'R$ 0,00') {
+                e.target.select();
+            } else {
+                // Posicionar cursor no final
                 e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+            }
+        });
+
+        valorInput.addEventListener('blur', function(e) {
+            // Formatar novamente ao perder o foco para garantir formato correto
+            const formattedValue = formatCurrency(e.target.value);
+            e.target.value = formattedValue;
+        });
+
+        // Interceptar colagem para formatar automaticamente
+        valorInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const formattedValue = formatCurrency(pastedText);
+            e.target.value = formattedValue;
+        });
+
+        // Interceptar teclas especiais para melhor UX
+        valorInput.addEventListener('keydown', function(e) {
+            // Permitir teclas de controle (backspace, delete, tab, escape, enter)
+            if ([8, 9, 27, 13, 46].indexOf(e.keyCode) !== -1 ||
+                // Permitir Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                // Permitir home, end, setas
+                (e.keyCode >= 35 && e.keyCode <= 39)) {
+                return;
+            }
+            
+            // Permitir apenas números e vírgula
+            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && 
+                (e.keyCode < 96 || e.keyCode > 105) && 
+                e.keyCode !== 188) { // 188 é a vírgula
+                e.preventDefault();
             }
         });
     }

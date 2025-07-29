@@ -2,6 +2,76 @@ import { productCodes, productNames, userNames, setEditingRow, clearEditingState
 
 let productCount = 0;
 
+// Função para calcular dias até vencimento
+function calcularDiasParaVencimento(dataVencimento) {
+    if (!dataVencimento || dataVencimento.trim() === '') {
+        return { status: 'sem-vencimento', texto: 'N/A', dias: null };
+    }
+
+    try {
+        // Converter data brasileira DD/MM/YYYY para objeto Date
+        const parts = dataVencimento.split('/');
+        if (parts.length !== 3) {
+            return { status: 'sem-vencimento', texto: 'N/A', dias: null };
+        }
+
+        const dia = parseInt(parts[0]);
+        const mes = parseInt(parts[1]) - 1; // Mês no JavaScript é 0-indexado
+        const ano = parseInt(parts[2]);
+
+        // Validar se são números válidos
+        if (isNaN(dia) || isNaN(mes) || isNaN(ano)) {
+            return { status: 'sem-vencimento', texto: 'N/A', dias: null };
+        }
+
+        const dataVenc = new Date(ano, mes, dia);
+        const hoje = new Date();
+        
+        // Zerar horas para comparar apenas a data
+        hoje.setHours(0, 0, 0, 0);
+        dataVenc.setHours(0, 0, 0, 0);
+
+        // Calcular diferença em dias
+        const diferenca = Math.ceil((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+
+        if (diferenca < 0) {
+            // Produto vencido
+            const diasVencido = Math.abs(diferenca);
+            return { 
+                status: 'vencido', 
+                texto: 'VENCIDO', 
+                dias: diferenca,
+                diasVencido: diasVencido
+            };
+        } else if (diferenca === 0) {
+            // Vence hoje
+            return { 
+                status: 'vencido', 
+                texto: 'HOJE', 
+                dias: diferenca 
+            };
+        } else if (diferenca <= 7) {
+            // Próximo do vencimento (1-7 dias)
+            return { 
+                status: 'proximo-vencimento', 
+                texto: `${diferenca} dia${diferenca > 1 ? 's' : ''}`, 
+                dias: diferenca 
+            };
+        } else {
+            // Normal (8+ dias)
+            return { 
+                status: 'normal', 
+                texto: `${diferenca} dias`, 
+                dias: diferenca 
+            };
+        }
+
+    } catch (error) {
+        console.error('Erro ao calcular dias para vencimento:', error);
+        return { status: 'sem-vencimento', texto: 'ERRO', dias: null };
+    }
+}
+
 export function addProductToTable(produto) {
     productCount++;
     const tableBody = document.getElementById('productTable').querySelector('tbody');
@@ -15,6 +85,11 @@ export function addProductToTable(produto) {
     // Verificar se existe dataUltimaModificacao, senão usar a data de inserção
     const dataUltimaModificacao = produto.dataUltimaModificacao || produto.dataHoraInsercao;
 
+    // Calcular status de vencimento
+    const statusVencimento = produto.motivo === 'VENCIDO' 
+        ? calcularDiasParaVencimento(produto.dataVencimento)
+        : { status: 'sem-vencimento', texto: 'N/A', dias: null };
+
     row.innerHTML = `
         <td>${productCount}</td>
         <td>${escapeHtml(produto.codigo)}</td>
@@ -23,6 +98,7 @@ export function addProductToTable(produto) {
         <td>${produto.quantidade}</td>
         <td>${escapeHtml(produto.motivo)}</td>
         <td>${escapeHtml(produto.dataVencimento || '')}</td>
+        <td class="${statusVencimento.status}" title="${getTooltipText(statusVencimento)}">${statusVencimento.texto}</td>
         <td>${escapeHtml(produto.usuario)}</td>
         <td>${escapeHtml(produto.dataHoraInsercao)}</td>
         <td>${escapeHtml(dataUltimaModificacao)}</td>
@@ -38,6 +114,25 @@ export function addProductToTable(produto) {
 
     // Atualizar arrays de autocomplete
     updateAutocompleteArrays(produto);
+}
+
+// Função para gerar tooltip com informações detalhadas
+function getTooltipText(statusVencimento) {
+    switch (statusVencimento.status) {
+        case 'vencido':
+            if (statusVencimento.diasVencido) {
+                return `Produto vencido há ${statusVencimento.diasVencido} dia${statusVencimento.diasVencido > 1 ? 's' : ''}`;
+            }
+            return statusVencimento.texto === 'HOJE' ? 'Produto vence hoje!' : 'Produto vencido';
+        case 'proximo-vencimento':
+            return `Atenção: vence em ${statusVencimento.dias} dia${statusVencimento.dias > 1 ? 's' : ''}`;
+        case 'normal':
+            return `Produto válido por mais ${statusVencimento.dias} dias`;
+        case 'sem-vencimento':
+            return 'Produto não possui data de vencimento';
+        default:
+            return '';
+    }
 }
 
 export function editProduct(button) {
@@ -78,7 +173,7 @@ export function editProduct(button) {
             dataVencimentoInput.value = '';
         }
         
-        document.getElementById('usuario').value = getTextContent(row.children[7]);
+        document.getElementById('usuario').value = getTextContent(row.children[8]); // Ajustado índice
 
         // Scroll para o formulário
         document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
@@ -135,15 +230,27 @@ export function deleteProduct(button, productId) {
 
 export function updateProductInTable(row, produto) {
     try {
+        // Calcular novo status de vencimento
+        const statusVencimento = produto.motivo === 'VENCIDO' 
+            ? calcularDiasParaVencimento(produto.dataVencimento)
+            : { status: 'sem-vencimento', texto: 'N/A', dias: null };
+
         row.children[1].textContent = produto.codigo;
         row.children[2].textContent = produto.valor;
         row.children[3].textContent = produto.produto;
         row.children[4].textContent = produto.quantidade;
         row.children[5].textContent = produto.motivo;
         row.children[6].textContent = produto.dataVencimento || '';
-        row.children[7].textContent = produto.usuario;
-        // Manter a data de criação original (children[8])
-        row.children[9].textContent = produto.dataUltimaModificacao || getCurrentDateTime();
+        
+        // Atualizar coluna de status de vencimento
+        const statusCell = row.children[7];
+        statusCell.textContent = statusVencimento.texto;
+        statusCell.className = statusVencimento.status;
+        statusCell.title = getTooltipText(statusVencimento);
+        
+        row.children[8].textContent = produto.usuario;
+        // Manter a data de criação original (children[9])
+        row.children[10].textContent = produto.dataUltimaModificacao || getCurrentDateTime();
 
         // Atualizar arrays de autocomplete
         updateAutocompleteArrays(produto);
@@ -236,6 +343,39 @@ export function filterTable(searchTerm) {
         row.style.display = found ? '' : 'none';
     });
 }
+
+// Função para atualizar automaticamente os status de vencimento
+export function atualizarStatusVencimento() {
+    const tableBody = document.getElementById('productTable').querySelector('tbody');
+    const rows = tableBody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const motivo = getTextContent(row.children[5]);
+        const dataVencimento = getTextContent(row.children[6]);
+        
+        if (motivo === 'VENCIDO' && dataVencimento) {
+            const statusVencimento = calcularDiasParaVencimento(dataVencimento);
+            const statusCell = row.children[7];
+            
+            // Atualizar apenas se mudou
+            if (statusCell.textContent !== statusVencimento.texto) {
+                statusCell.textContent = statusVencimento.texto;
+                statusCell.className = statusVencimento.status;
+                statusCell.title = getTooltipText(statusVencimento);
+            }
+        }
+    });
+}
+
+// Atualizar status de vencimento a cada hora (3600000 ms)
+setInterval(atualizarStatusVencimento, 3600000);
+
+// Atualizar também quando a página ganha foco (usuário volta para a aba)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        atualizarStatusVencimento();
+    }
+});
 
 // Tornar funções acessíveis globalmente
 window.editProduct = editProduct;

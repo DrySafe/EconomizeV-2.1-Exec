@@ -18,7 +18,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     padding: 30px;
-    max-width: 1400px; /* Aumentar largura para acomodar nova coluna */
+    max-width: 1400px;
     width: 95%;
     margin: 20px auto;
     position: relative;
@@ -178,9 +178,9 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-    font-size: 13px; /* Reduzir tamanho da fonte para acomodar nova coluna */
+    font-size: 13px;
     background: #fff;
-    min-width: 1200px; /* Largura mínima para rolagem horizontal */
+    min-width: 1020px; /* Aumentada devido à nova coluna */
 }
 
 table, th, td {
@@ -188,11 +188,11 @@ table, th, td {
 }
 
 th, td {
-    padding: 10px 6px; /* Reduzir padding para economizar espaço */
+    padding: 10px 6px;
     text-align: left;
     vertical-align: middle;
     word-wrap: break-word;
-    max-width: 150px; /* Limitar largura máxima das células */
+    max-width: 150px;
 }
 
 th {
@@ -205,21 +205,24 @@ th {
     position: sticky;
     top: 0;
     z-index: 10;
-    white-space: nowrap; /* Evitar quebra de linha no cabeçalho */
+    white-space: normal; /* Permitir quebra de linha nos cabeçalhos */
+    line-height: 1.2;
+    text-align: center;
 }
 
-/* Tamanhos específicos para colunas */
+/* Tamanhos específicos para colunas - otimizados com quebra de linha */
 th:nth-child(1) { width: 40px; } /* # */
 th:nth-child(2) { width: 80px; } /* Código */
 th:nth-child(3) { width: 90px; } /* Valor */
 th:nth-child(4) { width: 180px; } /* Produto */
-th:nth-child(5) { width: 80px; } /* Quantidade */
+th:nth-child(5) { width: 60px; } /* Quantidade */
 th:nth-child(6) { width: 90px; } /* Motivo */
-th:nth-child(7) { width: 120px; } /* Data Vencimento */
-th:nth-child(8) { width: 100px; } /* Usuário */
-th:nth-child(9) { width: 140px; } /* Data Criação */
-th:nth-child(10) { width: 140px; } /* Última Modificação */
-th:nth-child(11) { width: 120px; } /* Ações */
+th:nth-child(7) { width: 80px; } /* Data Vencimento */
+th:nth-child(8) { width: 70px; } /* Status Vencimento */
+th:nth-child(9) { width: 100px; } /* Usuário */
+th:nth-child(10) { width: 90px; } /* Data Criação */
+th:nth-child(11) { width: 90px; } /* Última Modificação */
+th:nth-child(12) { width: 120px; } /* Ações */
 
 td {
     background-color: #fff;
@@ -431,105 +434,6 @@ tr:hover td:nth-child(10) {
     animation: fadeIn 0.5s ease-out;
 }
 
-/* Responsive */
-@media only screen and (max-width: 1200px) {
-    .container {
-        max-width: 100%;
-        padding: 20px;
-    }
-    
-    table {
-        font-size: 11px;
-    }
-    
-    th, td {
-        padding: 8px 4px;
-    }
-}
-
-@media only screen and (max-width: 768px) {
-    .container {
-        width: 98%;
-        padding: 15px;
-        margin: 10px auto;
-    }
-    
-    .header {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .logo img {
-        margin-right: 0;
-        margin-bottom: 10px;
-    }
-    
-    h1 {
-        font-size: 1.8em;
-    }
-    
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
-    
-    .form-container {
-        padding: 15px;
-    }
-    
-    table {
-        font-size: 10px;
-        min-width: 800px;
-    }
-    
-    th, td {
-        padding: 6px 3px;
-    }
-    
-    .edit-button, .delete-button {
-        padding: 3px 6px;
-        font-size: 9px;
-        min-width: 40px;
-    }
-    
-    /* Colunas específicas para mobile */
-    th:nth-child(4) { width: 120px; } /* Produto - reduzir */
-    th:nth-child(9), th:nth-child(10) { width: 100px; } /* Datas - reduzir */
-}
-
-@media only screen and (max-width: 480px) {
-    .container {
-        width: 100%;
-        margin: 5px auto;
-        border-radius: 0;
-        padding: 10px;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .btn-primary, .btn-danger {
-        padding: 12px;
-        font-size: 14px;
-    }
-    
-    table {
-        font-size: 9px;
-        min-width: 700px;
-    }
-    
-    th, td {
-        padding: 4px 2px;
-    }
-    
-    .edit-button, .delete-button {
-        padding: 2px 4px;
-        font-size: 8px;
-        min-width: 35px;
-    }
-}
-
 /* Estados de campo de data */
 #dataVencimentoGroup {
     transition: all 0.3s ease;
@@ -572,4 +476,332 @@ select:focus {
 @keyframes highlightEdit {
     0% { background-color: #4caf50; }
     100% { background-color: transparent; }
+}
+
+/* RESPONSIVE - OTIMIZAÇÕES PARA MOBILE */
+
+/* Tablets */
+@media only screen and (max-width: 1200px) {
+    .container {
+        max-width: 100%;
+        padding: 20px;
+    }
+    
+    table {
+        font-size: 11px;
+        min-width: 900px;
+    }
+    
+    th, td {
+        padding: 6px 4px;
+    }
+    
+    /* Reduzir larguras das colunas para tablets */
+    th:nth-child(4) { width: 140px; } /* Produto */
+    th:nth-child(5) { width: 50px; } /* Quantidade */
+    th:nth-child(7) { width: 70px; } /* Data Vencimento */
+    th:nth-child(8) { width: 60px; } /* Status Vencimento */
+    th:nth-child(10), th:nth-child(11) { width: 80px; } /* Datas */
+}
+
+/* Mobile Grande (768px - 1024px) */
+@media only screen and (max-width: 1024px) {
+    table {
+        font-size: 10px;
+        min-width: 620px; /* Ajustada para nova coluna */
+    }
+    
+    th, td {
+        padding: 5px 3px;
+    }
+    
+    /* Ajustar colunas para mobile grande */
+    th:nth-child(1) { width: 30px; } /* # */
+    th:nth-child(2) { width: 60px; } /* Código */
+    th:nth-child(3) { width: 70px; } /* Valor */
+    th:nth-child(4) { width: 120px; } /* Produto */
+    th:nth-child(5) { width: 40px; } /* Quantidade */
+    th:nth-child(6) { width: 60px; } /* Motivo */
+    th:nth-child(7) { width: 60px; } /* Data Vencimento */
+    th:nth-child(8) { width: 50px; } /* Status Vencimento */
+    th:nth-child(9) { width: 70px; } /* Usuário */
+    th:nth-child(10) { width: 70px; } /* Data Criação */
+    th:nth-child(11) { width: 70px; } /* Última Modificação */
+    th:nth-child(12) { width: 80px; } /* Ações */
+    
+    .edit-button, .delete-button {
+        padding: 3px 5px;
+        font-size: 8px;
+        min-width: 35px;
+    }
+}
+
+/* Mobile Médio (481px - 768px) */
+@media only screen and (max-width: 768px) {
+    .container {
+        width: 98%;
+        padding: 15px;
+        margin: 10px auto;
+    }
+    
+    .header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .logo img {
+        width: 120px;
+        height: 37px;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    h1 {
+        font-size: 1.6em;
+    }
+    
+    h2 {
+        font-size: 1.4em;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    
+    .form-container {
+        padding: 15px;
+    }
+    
+    table {
+        font-size: 9px;
+        min-width: 570px; /* Ajustada para nova coluna */
+    }
+    
+    th, td {
+        padding: 4px 2px;
+        font-size: 8px;
+    }
+    
+    /* Colunas ultra compactas para mobile médio */
+    th:nth-child(1) { width: 25px; } /* # */
+    th:nth-child(2) { width: 50px; } /* Código */
+    th:nth-child(3) { width: 55px; } /* Valor */
+    th:nth-child(4) { width: 100px; } /* Produto */
+    th:nth-child(5) { width: 30px; } /* Quantidade */
+    th:nth-child(6) { width: 50px; } /* Motivo */
+    th:nth-child(7) { width: 50px; } /* Data Vencimento */
+    th:nth-child(8) { width: 45px; } /* Status Vencimento */
+    th:nth-child(9) { width: 55px; } /* Usuário */
+    th:nth-child(10) { width: 60px; } /* Data Criação */
+    th:nth-child(11) { width: 60px; } /* Última Modificação */
+    th:nth-child(12) { width: 65px; } /* Ações */
+    
+    .edit-button, .delete-button {
+        padding: 2px 4px;
+        font-size: 7px;
+        min-width: 28px;
+        margin-bottom: 1px;
+    }
+    
+    /* Abreviações de cabeçalhos para economizar espaço */
+    th:nth-child(7):after { content: 'Venc.'; }
+    th:nth-child(9):after { content: 'Criado'; }
+    th:nth-child(10):after { content: 'Mod.'; }
+    th:nth-child(11):after { content: 'Ações'; }
+}
+
+/* Mobile Pequeno (até 480px) */
+@media only screen and (max-width: 480px) {
+    .container {
+        width: 100%;
+        margin: 5px auto;
+        border-radius: 0;
+        padding: 10px;
+    }
+    
+    .logo img {
+        width: 100px;
+        height: 31px;
+    }
+    
+    h1 {
+        font-size: 1.4em;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .stat-number {
+        font-size: 20px;
+    }
+    
+    .stat-label {
+        font-size: 10px;
+    }
+    
+    .btn-primary, .btn-danger {
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    table {
+        font-size: 8px;
+        min-width: 520px; /* Ajustada para nova coluna */
+    }
+    
+    /* Colunas super compactas para mobile pequeno */
+    th:nth-child(1) { width: 20px; } /* # */
+    th:nth-child(2) { width: 45px; } /* Código */
+    th:nth-child(3) { width: 50px; } /* Valor */
+    th:nth-child(4) { width: 85px; } /* Produto */
+    th:nth-child(5) { width: 30px; } /* Quantidade */
+    th:nth-child(6) { width: 45px; } /* Motivo */
+    th:nth-child(7) { width: 50px; } /* Data Vencimento */
+    th:nth-child(8) { width: 40px; } /* Status Vencimento */
+    th:nth-child(9) { width: 50px; } /* Usuário */
+    th:nth-child(10) { width: 65px; } /* Data Criação */
+    th:nth-child(11) { width: 65px; } /* Última Modificação */
+    th:nth-child(12) { width: 55px; } /* Ações */
+    
+    th, td {
+        padding: 3px 1px;
+        font-size: 7px;
+        line-height: 1.2;
+    }
+    
+    /* Colunas super compactas para mobile pequeno */
+    th:nth-child(1) { width: 20px; } /* # */
+    th:nth-child(2) { width: 45px; } /* Código */
+    th:nth-child(3) { width: 50px; } /* Valor */
+    th:nth-child(4) { width: 85px; } /* Produto */
+    th:nth-child(5) { width: 30px; } /* Quantidade */
+    th:nth-child(6) { width: 45px; } /* Motivo */
+    th:nth-child(7) { width: 55px; } /* Data Vencimento */
+    th:nth-child(8) { width: 50px; } /* Usuário */
+    th:nth-child(9) { width: 65px; } /* Data Criação */
+    th:nth-child(10) { width: 65px; } /* Última Modificação */
+    th:nth-child(11) { width: 55px; } /* Ações */
+    
+    .edit-button, .delete-button {
+        padding: 1px 3px;
+        font-size: 6px;
+        min-width: 24px;
+        border-radius: 2px;
+    }
+    
+    /* Texto dos botões mais curto */
+    .edit-button:after { content: '✏️'; }
+    .delete-button:after { content: '🗑️'; }
+}
+
+/* Mobile Extra Pequeno (até 360px) */
+@media only screen and (max-width: 360px) {
+    .container {
+        padding: 8px;
+    }
+    
+    table {
+        font-size: 7px;
+        min-width: 400px; /* Ultra compacto */
+    }
+    
+    th, td {
+        padding: 2px 1px;
+        font-size: 6px;
+    }
+    
+    /* Colunas extremamente compactas */
+    th:nth-child(1) { width: 18px; } /* # */
+    th:nth-child(2) { width: 40px; } /* Código */
+    th:nth-child(3) { width: 45px; } /* Valor */
+    th:nth-child(4) { width: 75px; } /* Produto */
+    th:nth-child(5) { width: 25px; } /* Quantidade */
+    th:nth-child(6) { width: 40px; } /* Motivo */
+    th:nth-child(7) { width: 50px; } /* Data Vencimento */
+    th:nth-child(8) { width: 45px; } /* Usuário */
+    th:nth-child(9) { width: 60px; } /* Data Criação */
+    th:nth-child(10) { width: 60px; } /* Última Modificação */
+    th:nth-child(11) { width: 50px; } /* Ações */
+    
+    .edit-button, .delete-button {
+        padding: 1px 2px;
+        font-size: 5px;
+        min-width: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+    }
+    
+    .stat-number {
+        font-size: 16px;
+    }
+    
+    .stat-label {
+        font-size: 8px;
+    }
+}
+
+/* Melhorias específicas para tabela em mobile */
+@media only screen and (max-width: 768px) {
+    /* Quebra de linha inteligente para produtos longos */
+    td:nth-child(4) {
+        word-break: break-word;
+        hyphens: auto;
+        max-width: 100px;
+        white-space: normal;
+        line-height: 1.1;
+    }
+    
+    /* Quebra de linha para usuários */
+    td:nth-child(9) {
+        word-break: break-word;
+        max-width: 55px;
+    }
+    
+    /* Formatação especial para datas */
+    td:nth-child(10), td:nth-child(11) {
+        font-size: 6px;
+        line-height: 1;
+        word-break: break-word;
+    }
+    
+    /* Status de vencimento com fonte ainda menor em mobile */
+    td:nth-child(8) {
+        font-size: 7px;
+        font-weight: bold;
+    }
+    
+    /* Melhor contraste para botões pequenos */
+    .edit-button {
+        background: #ff9800;
+        font-weight: bold;
+    }
+    
+    .delete-button {
+        background: #e74c3c;
+        font-weight: bold;
+    }
+    
+    /* Indicador visual mais claro para rolagem horizontal */
+    .table-container::after {
+        content: '← Arraste para ver mais →';
+        display: block;
+        text-align: center;
+        font-size: 10px;
+        color: #666;
+        margin-top: 5px;
+        font-style: italic;
+    }
+}
+
+/* Esconder indicador de rolagem em telas maiores */
+@media only screen and (min-width: 769px) {
+    .table-container::after {
+        display: none;
+    }
 }
