@@ -8,7 +8,7 @@ const requestIp = require('request-ip');
 const logger = require('./logger');
 
 const app = express();
-const port = process.env.PORT || 3500;
+const port = process.env.PORT || 3700;
 
 // Configuração de diretórios
 const userDataDir = path.join(os.homedir(), 'EconomizeData');
@@ -395,8 +395,23 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
+function getLocalIp() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
 app.listen(port, '0.0.0.0', () => {
+    const localIp = getLocalIp();
     console.log(`🚀 Servidor rodando na porta ${port}`);
-    console.log(`📊 Dashboard disponível em: http://localhost:${port}`);
-    logger.log(`Servidor iniciado na porta ${port}`);
+    console.log(`📊 Dashboard disponível em:`);
+    console.log(`   → http://localhost:${port}`);
+    console.log(`   → http://${localIp}:${port}`);
+    logger.log(`Servidor iniciado em http://${localIp}:${port}`);
 });
