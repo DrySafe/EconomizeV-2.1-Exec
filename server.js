@@ -291,10 +291,35 @@ app.delete('/deleteProduct/:id', (req, res) => {
 
 app.get('/exportToExcel', async (req, res) => {
     try {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Produtos');
+        let productsToExport = [...products];
+        let sheetName = 'Produtos';
+        let filters = null;
 
-        // Definir colunas - INCLUINDO A NOVA COLUNA DE STATUS
+        // Verificar se há filtros
+        if (req.query.filters) {
+            try {
+                filters = JSON.parse(req.query.filters);
+                console.log('Filtros recebidos:', filters);
+
+                // Aplicar filtro apenas por motivo
+                if (filters.type === 'motivo' && filters.motivos && filters.motivos.length > 0) {
+                    productsToExport = products.filter(p => filters.motivos.includes(p.motivo));
+                    sheetName = filters.motivos.length === 1 ? 
+                        `Produtos ${filters.motivos[0]}` : 
+                        'Produtos Filtrados por Motivo';
+                }
+                // Se for 'all', exporta todos
+            } catch (error) {
+                console.error('Erro ao processar filtros:', error);
+            }
+        }
+
+        console.log(`Exportando ${productsToExport.length} de ${products.length} produtos`);
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet(sheetName);
+
+        // Definir colunas
         worksheet.columns = [
             { header: '#', key: 'id', width: 8 },
             { header: 'Código', key: 'codigo', width: 12 },
@@ -309,8 +334,41 @@ app.get('/exportToExcel', async (req, res) => {
             { header: 'Última Modificação', key: 'dataUltimaModificacao', width: 20 }
         ];
 
+        // Adicionar informações do filtro como cabeçalho
+        if (filters && filters.type !== 'all') {
+            let filterInfo = '';
+            switch(filters.type) {
+                case 'motivo':
+                    filterInfo = `Filtro aplicado: Motivos - ${filters.motivos.join(', ')}`;
+                    break;
+                case 'status':
+                    const statusNames = {
+                        'vencido': 'Vencidos',
+                        'hoje': 'Vence Hoje',
+                        'proximo': 'Próximo do Vencimento (1-7 dias)',
+                        'normal': 'Normal (8+ dias)',
+                        'sem': 'Sem Vencimento'
+                    };
+                    const statusTexts = filters.status.map(s => statusNames[s] || s);
+                    filterInfo = `Filtro aplicado: Status - ${statusTexts.join(', ')}`;
+                    break;
+                case 'usuario':
+                    filterInfo = `Filtro aplicado: Usuários - ${filters.usuarios.join(', ')}`;
+                    break;
+            }
+
+            // Adicionar linha de informação do filtro
+            worksheet.insertRow(1, [filterInfo]);
+            worksheet.getCell('A1').font = { bold: true, color: { argb: 'FF0066CC' } };
+            worksheet.mergeCells('A1:K1');
+            worksheet.getCell('A1').alignment = { horizontal: 'center' };
+            
+            // Adicionar linha em branco
+            worksheet.insertRow(2, []);
+        }
+
         // Adicionar dados
-        products.forEach((product, index) => {
+        productsToExport.forEach((product, index) => {
             const statusVencimento = product.motivo === 'VENCIDO' 
                 ? calcularDiasParaVencimento(product.dataVencimento)
                 : 'N/A';
@@ -331,7 +389,11 @@ app.get('/exportToExcel', async (req, res) => {
         });
 
         // Estilizar planilha
+        const startRow = filters && filters.type !== 'all' ? 4 : 1; // Ajustar linha inicial baseado no filtro
+        
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+            if (rowNumber < startRow) return; // Pular linhas de filtro
+
             row.eachCell({ includeEmpty: false }, function (cell, colNumber) {
                 cell.border = {
                     top: { style: 'thin' },
@@ -341,7 +403,7 @@ app.get('/exportToExcel', async (req, res) => {
                 };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 
-                if (rowNumber === 1) {
+                if (rowNumber === startRow) {
                     // Cabeçalho
                     cell.fill = {
                         type: 'pattern',
@@ -397,17 +459,42 @@ app.get('/exportToExcel', async (req, res) => {
             });
         });
 
+        // Nome do arquivo baseado no filtro
+        let filename = 'produtos';
+        if (filters) {
+            switch(filters.type) {
+                case 'motivo':
+                    if (filters.motivos && filters.motivos.length === 1) {
+                        filename += `_${filters.motivos[0].toLowerCase().replace(/\s+/g, '_')}`;
+                    } else if (filters.motivos && filters.motivos.length > 1) {
+                        filename += '_por_motivo';
+                    }
+                    break;
+                case 'status':
+                    filename += '_por_status';
+                    break;
+                case 'usuario':
+                    if (filters.usuarios && filters.usuarios.length === 1) {
+                        filename += `_${filters.usuarios[0].toLowerCase().replace(/\s+/g, '_')}`;
+                    } else if (filters.usuarios && filters.usuarios.length > 1) {
+                        filename += '_por_usuario';
+                    }
+                    break;
+            }
+        }
+        filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
+
         // Configurar resposta
-        const filename = `produtos_${new Date().toISOString().split('T')[0]}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
 
         await workbook.xlsx.write(res);
         res.end();
 
-        logger.log(`Exportação Excel realizada: ${filename}`);
+        logger.log(`Exportação Excel realizada: ${filename} - ${productsToExport.length} produtos`);
     } catch (error) {
         logger.log(`Erro na exportação Excel: ${error.message}`);
+        console.error('Erro detalhado na exportação:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Erro ao exportar para Excel' 
@@ -497,6 +584,265 @@ function getLocalIp() {
     }
     return 'localhost';
 }
+
+// Função auxiliar para calcular status de vencimento para filtros
+function calcularStatusVencimento(dataVencimento) {
+    if (!dataVencimento || dataVencimento.trim() === '') {
+        return 'sem';
+    }
+
+    try {
+        const parts = dataVencimento.split('/');
+        if (parts.length !== 3) {
+            return 'sem';
+        }
+
+        const dia = parseInt(parts[0]);
+        const mes = parseInt(parts[1]) - 1;
+        const ano = parseInt(parts[2]);
+
+        if (isNaN(dia) || isNaN(mes) || isNaN(ano)) {
+            return 'sem';
+        }
+
+        const dataVenc = new Date(ano, mes, dia);
+        const hoje = new Date();
+        
+        hoje.setHours(0, 0, 0, 0);
+        dataVenc.setHours(0, 0, 0, 0);
+
+        const diferenca = Math.ceil((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+
+        if (diferenca < 0) {
+            return 'vencido';
+        } else if (diferenca === 0) {
+            return 'hoje';
+        } else if (diferenca <= 7) {
+            return 'proximo';
+        } else {
+            return 'normal';
+        }
+
+    } catch (error) {
+        console.error('Erro ao calcular status de vencimento:', error);
+        return 'sem';
+    }
+}
+
+// ROTA ATUALIZADA PARA EXPORTAÇÃO COM FILTROS
+app.get('/exportToExcel', async (req, res) => {
+    try {
+        let productsToExport = [...products]; // Cópia dos produtos
+        let sheetName = 'Produtos';
+        let filters = null;
+
+        // Verificar se há filtros
+        if (req.query.filters) {
+            try {
+                filters = JSON.parse(req.query.filters);
+                console.log('Filtros recebidos:', filters);
+
+                // Aplicar filtro apenas por motivo
+                if (filters.type === 'motivo' && filters.motivos && filters.motivos.length > 0) {
+                    productsToExport = products.filter(p => filters.motivos.includes(p.motivo));
+                    sheetName = filters.motivos.length === 1 ? 
+                        `Produtos ${filters.motivos[0]}` : 
+                        'Produtos Filtrados por Motivo';
+                }
+                // Se for 'all', exporta todos
+            } catch (error) {
+                console.error('Erro ao processar filtros:', error);
+                // Continuar com todos os produtos se houver erro nos filtros
+            }
+        }
+
+        console.log(`Exportando ${productsToExport.length} de ${products.length} produtos`);
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet(sheetName);
+
+        // Definir colunas
+        worksheet.columns = [
+            { header: '#', key: 'id', width: 8 },
+            { header: 'Código', key: 'codigo', width: 12 },
+            { header: 'Produto', key: 'produto', width: 35 },
+            { header: 'Valor', key: 'valor', width: 15 },
+            { header: 'Quantidade', key: 'quantidade', width: 12 },
+            { header: 'Motivo', key: 'motivo', width: 15 },
+            { header: 'Data de Vencimento', key: 'dataVencimento', width: 20 },
+            { header: 'Status Vencimento', key: 'statusVencimento', width: 18 },
+            { header: 'Usuário', key: 'usuario', width: 15 },
+            { header: 'Data de Criação', key: 'dataHoraInsercao', width: 20 },
+            { header: 'Última Modificação', key: 'dataUltimaModificacao', width: 20 }
+        ];
+
+        // Adicionar informações do filtro como cabeçalho
+        if (filters && filters.type !== 'all') {
+            let filterInfo = '';
+            switch(filters.type) {
+                case 'motivo':
+                    filterInfo = `Filtro aplicado: Motivos - ${filters.motivos.join(', ')}`;
+                    break;
+                case 'status':
+                    const statusNames = {
+                        'vencido': 'Vencidos',
+                        'hoje': 'Vence Hoje',
+                        'proximo': 'Próximo do Vencimento (1-7 dias)',
+                        'normal': 'Normal (8+ dias)',
+                        'sem': 'Sem Vencimento'
+                    };
+                    const statusTexts = filters.status.map(s => statusNames[s] || s);
+                    filterInfo = `Filtro aplicado: Status - ${statusTexts.join(', ')}`;
+                    break;
+                case 'usuario':
+                    filterInfo = `Filtro aplicado: Usuários - ${filters.usuarios.join(', ')}`;
+                    break;
+            }
+
+            // Adicionar linha de informação do filtro
+            worksheet.insertRow(1, [filterInfo]);
+            worksheet.getCell('A1').font = { bold: true, color: { argb: 'FF0066CC' } };
+            worksheet.mergeCells('A1:K1');
+            worksheet.getCell('A1').alignment = { horizontal: 'center' };
+            
+            // Adicionar linha em branco
+            worksheet.insertRow(2, []);
+        }
+
+        // Adicionar dados
+        productsToExport.forEach((product, index) => {
+            const statusVencimento = product.motivo === 'VENCIDO' 
+                ? calcularDiasParaVencimento(product.dataVencimento)
+                : 'N/A';
+
+            worksheet.addRow({
+                id: index + 1,
+                codigo: product.codigo,
+                produto: product.produto,
+                valor: product.valor,
+                quantidade: product.quantidade,
+                motivo: product.motivo,
+                dataVencimento: product.motivo === 'VENCIDO' ? product.dataVencimento : '',
+                statusVencimento: statusVencimento,
+                usuario: product.usuario,
+                dataHoraInsercao: product.dataHoraInsercao,
+                dataUltimaModificacao: product.dataUltimaModificacao || product.dataHoraInsercao
+            });
+        });
+
+        // Estilizar planilha
+        const startRow = filters && filters.type !== 'all' ? 4 : 1; // Ajustar linha inicial baseado no filtro
+        
+        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+            if (rowNumber < startRow) return; // Pular linhas de filtro
+
+            row.eachCell({ includeEmpty: false }, function (cell, colNumber) {
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                
+                if (rowNumber === startRow) {
+                    // Cabeçalho
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFFF9800' }
+                    };
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                } else {
+                    // Dados - colorir coluna de status de vencimento
+                    if (colNumber === 8) { // Coluna Status Vencimento
+                        const statusText = cell.value;
+                        if (statusText === 'VENCIDO' || statusText === 'HOJE') {
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFEBEE' }
+                            };
+                            cell.font = { color: { argb: 'FFC62828' }, bold: true };
+                        } else if (statusText && statusText.includes('dia') && !statusText.includes('dias')) {
+                            // 1 dia - próximo do vencimento
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFF3E0' }
+                            };
+                            cell.font = { color: { argb: 'FFEF6C00' }, bold: true };
+                        } else if (statusText && statusText.match(/^[1-7] dias$/)) {
+                            // 2-7 dias - próximo do vencimento
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFFFF3E0' }
+                            };
+                            cell.font = { color: { argb: 'FFEF6C00' }, bold: true };
+                        } else if (statusText && statusText.includes('dias') && statusText !== 'N/A') {
+                            // 8+ dias - normal
+                            cell.fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: 'FFE8F5E8' }
+                            };
+                            cell.font = { color: { argb: 'FF2E7D32' }, bold: true };
+                        }
+                    } else {
+                        // Outras colunas - alternação de cores normal
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: rowNumber % 2 === 0 ? { argb: 'FFF6E7' } : { argb: 'FFFFFFFF' }
+                        };
+                    }
+                }
+            });
+        });
+
+        // Nome do arquivo baseado no filtro
+        let filename = 'produtos';
+        if (filters) {
+            switch(filters.type) {
+                case 'motivo':
+                    if (filters.motivos && filters.motivos.length === 1) {
+                        filename += `_${filters.motivos[0].toLowerCase().replace(/\s+/g, '_')}`;
+                    } else if (filters.motivos && filters.motivos.length > 1) {
+                        filename += '_por_motivo';
+                    }
+                    break;
+                case 'status':
+                    filename += '_por_status';
+                    break;
+                case 'usuario':
+                    if (filters.usuarios && filters.usuarios.length === 1) {
+                        filename += `_${filters.usuarios[0].toLowerCase().replace(/\s+/g, '_')}`;
+                    } else if (filters.usuarios && filters.usuarios.length > 1) {
+                        filename += '_por_usuario';
+                    }
+                    break;
+            }
+        }
+        filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        // Configurar resposta
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+        logger.log(`Exportação Excel realizada: ${filename} - ${productsToExport.length} produtos`);
+    } catch (error) {
+        logger.log(`Erro na exportação Excel: ${error.message}`);
+        console.error('Erro detalhado na exportação:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro ao exportar para Excel' 
+        });
+    }
+});
 
 app.listen(port, '0.0.0.0', () => {
     const localIp = getLocalIp();
