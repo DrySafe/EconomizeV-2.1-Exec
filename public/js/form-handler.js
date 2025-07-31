@@ -270,7 +270,14 @@ export function handleFormSubmit(event) {
             updateProduct(formData);
         } else {
             // Modo criação
-            addProduct(formData);
+            addProduct(formData)
+                .then(() => {
+                    location.reload(); // Força atualização da página
+                })
+                .catch(error => {
+                    console.error('Erro ao adicionar produto:', error);
+                    alert('Erro ao adicionar produto: ' + error.message);
+                });
         }
 
     } catch (error) {
@@ -280,7 +287,7 @@ export function handleFormSubmit(event) {
 }
 
 function addProduct(productData) {
-    fetch('/addProduct', {
+    return fetch('/addProduct', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

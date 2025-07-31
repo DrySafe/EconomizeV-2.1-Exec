@@ -72,6 +72,34 @@ function calcularDiasParaVencimento(dataVencimento) {
     }
 }
 
+// Função para calcular desconto
+function calcularValorIndicado(valorOriginal, dataVencimento) {
+    if (!dataVencimento || !valorOriginal) return valorOriginal;
+    // Extrai valor numérico do formato "R$ XX,XX"
+    let valorNumerico = parseFloat(valorOriginal.replace(/[R$\s]/g, '').replace(',', '.'));
+    if (isNaN(valorNumerico)) return valorOriginal;
+
+    // Calcula dias para vencimento
+    const parts = dataVencimento.split('/');
+    if (parts.length !== 3) return valorOriginal;
+    const dia = parseInt(parts[0]), mes = parseInt(parts[1]) - 1, ano = parseInt(parts[2]);
+    const dataVenc = new Date(ano, mes, dia);
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0); dataVenc.setHours(0,0,0,0);
+    const dias = Math.ceil((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+
+    let desconto = 0;
+    if (dias <= 15) desconto = 45;
+    else if (dias <= 30) desconto = 30;
+    else if (dias <= 45) desconto = 15;
+
+    if (desconto > 0) {
+        const valorDescontado = valorNumerico * (1 - desconto / 100);
+        return `R$ ${valorDescontado.toFixed(2).replace('.', ',')}`;
+    }
+    return valorOriginal;
+}
+
 function loadProducts() {
     try {
         if (fs.existsSync(productsFilePath)) {
@@ -324,7 +352,8 @@ app.get('/exportToExcel', async (req, res) => {
             { header: '#', key: 'id', width: 8 },
             { header: 'Código', key: 'codigo', width: 12 },
             { header: 'Produto', key: 'produto', width: 35 },
-            { header: 'Valor', key: 'valor', width: 15 },
+            { header: 'Valor Original', key: 'valor', width: 15 },
+            { header: 'Valor Indicado', key: 'valorIndicado', width: 15 }, // NOVA COLUNA
             { header: 'Quantidade', key: 'quantidade', width: 12 },
             { header: 'Motivo', key: 'motivo', width: 15 },
             { header: 'Data de Vencimento', key: 'dataVencimento', width: 20 },
@@ -372,12 +401,14 @@ app.get('/exportToExcel', async (req, res) => {
             const statusVencimento = product.motivo === 'VENCIDO' 
                 ? calcularDiasParaVencimento(product.dataVencimento)
                 : 'N/A';
+            const valorIndicado = calcularValorIndicado(product.valor, product.dataVencimento);
 
             worksheet.addRow({
                 id: index + 1,
                 codigo: product.codigo,
                 produto: product.produto,
                 valor: product.valor,
+                valorIndicado: valorIndicado, // NOVO VALOR CALCULADO
                 quantidade: product.quantidade,
                 motivo: product.motivo,
                 dataVencimento: product.motivo === 'VENCIDO' ? product.dataVencimento : '',
@@ -389,10 +420,10 @@ app.get('/exportToExcel', async (req, res) => {
         });
 
         // Estilizar planilha
-        const startRow = filters && filters.type !== 'all' ? 4 : 1; // Ajustar linha inicial baseado no filtro
+        const headerRow = filters && filters.type !== 'all' ? 3 : 1; // Calcule a linha do cabeçalho corretamente
         
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-            if (rowNumber < startRow) return; // Pular linhas de filtro
+            if (rowNumber < headerRow) return; // Pular linhas de filtro/informação
 
             row.eachCell({ includeEmpty: false }, function (cell, colNumber) {
                 cell.border = {
@@ -403,7 +434,7 @@ app.get('/exportToExcel', async (req, res) => {
                 };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 
-                if (rowNumber === startRow) {
+                if (rowNumber === headerRow) {
                     // Cabeçalho
                     cell.fill = {
                         type: 'pattern',
@@ -666,7 +697,8 @@ app.get('/exportToExcel', async (req, res) => {
             { header: '#', key: 'id', width: 8 },
             { header: 'Código', key: 'codigo', width: 12 },
             { header: 'Produto', key: 'produto', width: 35 },
-            { header: 'Valor', key: 'valor', width: 15 },
+            { header: 'Valor Original', key: 'valor', width: 15 },
+            { header: 'Valor Indicado', key: 'valorIndicado', width: 15 }, // NOVA COLUNA
             { header: 'Quantidade', key: 'quantidade', width: 12 },
             { header: 'Motivo', key: 'motivo', width: 15 },
             { header: 'Data de Vencimento', key: 'dataVencimento', width: 20 },
@@ -714,12 +746,14 @@ app.get('/exportToExcel', async (req, res) => {
             const statusVencimento = product.motivo === 'VENCIDO' 
                 ? calcularDiasParaVencimento(product.dataVencimento)
                 : 'N/A';
+            const valorIndicado = calcularValorIndicado(product.valor, product.dataVencimento);
 
             worksheet.addRow({
                 id: index + 1,
                 codigo: product.codigo,
                 produto: product.produto,
                 valor: product.valor,
+                valorIndicado: valorIndicado, // NOVO VALOR CALCULADO
                 quantidade: product.quantidade,
                 motivo: product.motivo,
                 dataVencimento: product.motivo === 'VENCIDO' ? product.dataVencimento : '',
@@ -731,10 +765,10 @@ app.get('/exportToExcel', async (req, res) => {
         });
 
         // Estilizar planilha
-        const startRow = filters && filters.type !== 'all' ? 4 : 1; // Ajustar linha inicial baseado no filtro
+        const headerRow = filters && filters.type !== 'all' ? 3 : 1; // Calcule a linha do cabeçalho corretamente
         
         worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-            if (rowNumber < startRow) return; // Pular linhas de filtro
+            if (rowNumber < headerRow) return; // Pular linhas de filtro/informação
 
             row.eachCell({ includeEmpty: false }, function (cell, colNumber) {
                 cell.border = {
@@ -745,7 +779,7 @@ app.get('/exportToExcel', async (req, res) => {
                 };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 
-                if (rowNumber === startRow) {
+                if (rowNumber === headerRow) {
                     // Cabeçalho
                     cell.fill = {
                         type: 'pattern',

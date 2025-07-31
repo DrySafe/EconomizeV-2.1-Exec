@@ -26,7 +26,7 @@
                 </div>
                 <div class="form-group">
                     <label for="valor">Valor do Produto:</label>
-                    <input type="text" id="valor" step="0.01" min="0" value="R$" pattern="[R$,0-9]+" required>
+                    <input type="text" id="valor" placeholder="R$ 0,00" required>
                 </div>
                 <div class="form-group">
                     <label for="quantidade">Quantidade:</label>
@@ -88,5 +88,14 @@
     <script src="js/export-handler.js" type="module"></script>
     <script src="js/event-listeners.js" type="module"></script>
     <script src="js/initialization.js" type="module"></script>
+    <script>
+      document.getElementById('valor').addEventListener('input', function (e) {
+        let v = e.target.value.replace(/\D/g, '');
+        v = (Number(v) / 100).toFixed(2) + '';
+        v = v.replace('.', ',');
+        v = v.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        e.target.value = 'R$ ' + v;
+      });
+    </script>
 </body>
 </html>
