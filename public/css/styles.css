@@ -240,8 +240,6 @@ td {
     font-size: 12px;
 }
 
-
-
 tr:nth-child(even) td {
     background-color: #f8f9fa;
 }
@@ -479,16 +477,15 @@ select:focus {
 
 .export-reset-container {
     display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 #exportExcelButton,
 #resetPlanilhaButton {
-  width: 100%;
+    width: 100%;
 }
-
 
 /* RESPONSIVE - OTIMIZAÇÕES PARA MOBILE */
 
@@ -515,8 +512,6 @@ select:focus {
     th:nth-child(8) { width: 60px; } /* Status Vencimento */
     th:nth-child(10), th:nth-child(11) { width: 80px; } /* Datas */
 }
-
-
 
 /* Mobile Médio (481px - 768px) */
 @media only screen and (max-width: 768px) {
@@ -579,18 +574,43 @@ select:focus {
     th:nth-child(11) { width: 60px; } /* Última Modificação */
     th:nth-child(12) { width: 65px; } /* Ações */
     
-    .edit-button, .delete-button {
-        padding: 2px 4px;
-        font-size: 7px;
+    /* Botões da tabela em mobile médio - botão edit maior que delete */
+    .edit-button {
+        padding: 6px 8px;
+        font-size: 10px;
+        min-width: 35px;
+        margin-bottom: 2px;
+        font-weight: bold;
+    }
+    
+    .delete-button {
+        padding: 4px 6px;
+        font-size: 9px;
         min-width: 28px;
-        margin-bottom: 1px;
+        margin-bottom: 2px;
+        font-weight: bold;
+    }
+    
+    /* Ajustes nos botões de exportar/resetar para mobile médio */
+    .export-reset-container {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 15px;
+    }
+    
+    #exportExcelButton {
+        width: 100%;
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    .btn-danger {
+        width: 100%;
+        margin-left: 0;
+        padding: 12px;
+        font-size: 14px;
     }
 }
-    /* Abreviações de cabeçalhos para economizar espaço 
-    th:nth-child(7):after { content: 'Venc.'; }
-    th:nth-child(9):after { content: 'Criado'; }
-    th:nth-child(10):after { content: 'Mod.'; }
-    th:nth-child(11):after { content: 'Ações'; }  */
 
 /* Mobile Pequeno (até 480px) */
 @media only screen and (max-width: 480px) {
@@ -653,29 +673,45 @@ select:focus {
         line-height: 1.2;
     }
     
-    /* Colunas super compactas para mobile pequeno */
-    th:nth-child(1) { width: 20px; } /* # */
-    th:nth-child(2) { width: 45px; } /* Código */
-    th:nth-child(3) { width: 50px; } /* Valor */
-    th:nth-child(4) { width: 85px; } /* Produto */
-    th:nth-child(5) { width: 30px; } /* Quantidade */
-    th:nth-child(6) { width: 45px; } /* Motivo */
-    th:nth-child(7) { width: 55px; } /* Data Vencimento */
-    th:nth-child(8) { width: 50px; } /* Usuário */
-    th:nth-child(9) { width: 65px; } /* Data Criação */
-    th:nth-child(10) { width: 65px; } /* Última Modificação */
-    th:nth-child(11) { width: 55px; } /* Ações */
+    /* Botões da tabela em mobile pequeno - edit maior que delete */
+    .edit-button {
+        padding: 5px 6px;
+        font-size: 8px;
+        min-width: 30px;
+        border-radius: 3px;
+        margin-bottom: 2px;
+        font-weight: bold;
+    }
     
-    .edit-button .delete-button {
-        padding: 1px 3px;
-        font-size: 6px;
-        min-width: 24px;
-        border-radius: 2px; 
+    .delete-button {
+        padding: 3px 4px;
+        font-size: 7px;
+        min-width: 22px;
+        border-radius: 2px;
+        margin-bottom: 2px;
+        font-weight: bold;
+    }
+    
+    /* Container de exportar/resetar em mobile pequeno */
+    .export-reset-container {
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 12px;
+    }
+    
+    #exportExcelButton {
+        width: 100%;
+        padding: 10px;
+        font-size: 12px;
+    }
+    
+    .btn-danger {
+        width: 100%;
+        margin-left: 0;
+        padding: 10px;
+        font-size: 12px;
     }
 }
-    /* Texto dos botões mais curto 
-    .edit-button:after { content: '✏️'; }
-    .delete-button:after { content: '🗑️'; } */
 
 /* Mobile Extra Pequeno (até 360px) */
 @media only screen and (max-width: 360px) {
@@ -706,10 +742,19 @@ select:focus {
     th:nth-child(10) { width: 60px; } /* Última Modificação */
     th:nth-child(11) { width: 50px; } /* Ações */
     
-    .edit-button, .delete-button {
-        padding: 1px 2px;
+    /* Botões da tabela ultra pequenos - edit maior que delete */
+    .edit-button {
+        padding: 3px 4px;
+        font-size: 6px;
+        min-width: 24px;
+        font-weight: bold;
+    }
+    
+    .delete-button {
+        padding: 2px 3px;
         font-size: 5px;
-        min-width: 20px;
+        min-width: 18px;
+        font-weight: bold;
     }
     
     .stats-grid {
@@ -723,6 +768,26 @@ select:focus {
     
     .stat-label {
         font-size: 8px;
+    }
+    
+    /* Container de exportar/resetar ultra pequeno */
+    .export-reset-container {
+        flex-direction: column;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    
+    #exportExcelButton {
+        width: 100%;
+        padding: 8px;
+        font-size: 10px;
+    }
+    
+    .btn-danger {
+        width: 100%;
+        margin-left: 0;
+        padding: 8px;
+        font-size: 10px;
     }
 }
 
@@ -754,23 +819,6 @@ select:focus {
     td:nth-child(8) {
         font-size: 7px;
         font-weight: bold;
-    }
-    
-    /* Melhor contraste para botões pequenos */
-    .edit-button {
-        background: #ff9800;
-        font-weight: bold;
-        padding: 1px 2px;
-        font-size: 6px;
-        min-width: 28px;
-    }
-    
-    .delete-button {
-        background: #e74c3c;
-        font-weight: bold;
-        padding: 1px 2px;
-        font-size: 6px;
-        min-width: 20px;
     }
     
     /* Indicador visual mais claro para rolagem horizontal */
