@@ -77,8 +77,11 @@
                 <tbody>
                 </tbody>
             </table>
-            <button id="exportExcelButton" class="btn-primary">Exportar para Excel</button>
-            <button id="resetButton" class="btn-danger">Resetar Lista de Produtos</button>
+            <div class="export-reset-container">
+                <button id="exportExcelButton" class="btn-primary">Exportar para Excel</button>
+                <button id="resetButton" class="btn-danger">Resetar Lista de Produtos</button>
+            </div>
+            
         </div>
     </div>
     
@@ -89,7 +92,7 @@
     <script src="js/event-listeners.js" type="module"></script>
     <script src="js/initialization.js" type="module"></script>
     <script>
-      document.getElementById('valor').addEventListener('input', function (e) {
+    document.getElementById('valor').addEventListener('input', function (e) {
         let v = e.target.value.replace(/\D/g, '');
         v = (Number(v) / 100).toFixed(2) + '';
         v = v.replace('.', ',');
